@@ -1,0 +1,61 @@
+pipeline {
+  agent {
+      node {
+        label 'nodejs'
+      }
+    }
+
+  environment {
+    // 您 Harbor 仓库的地址。
+    REGISTRY = '152.136.123.167:30002'
+    // 项目名称。
+    HARBOR_NAMESPACE = 'ks-devops-nest'
+    // Docker 镜像名称。
+    APP_NAME = 'nest-example-1'
+    // ‘harbor-test’是您在 KubeSphere 控制台上创建的凭证 ID。
+    HARBOR_CREDENTIAL = credentials('harbor-test')
+
+  }
+
+  stages {
+
+    /* stage('docker login') {
+      steps{
+          container('nodejs') {
+            // 请替换 -u 后面的 Docker Hub 用户名，不要忘记加上 ''。您也可以使用 Docker Hub 令牌。
+            sh '''echo $HARBOR_CREDENTIAL_PSW | docker login $REGISTRY -u $HARBOR_NAMESPACE_USR --password-stdin'''
+//             sh '''docker login -u $HARBOR_CREDENTIAL_USR -p $HARBOR_CREDENTIAL_PSW $REGISTRY'''
+          }
+      }
+    } */
+
+   stage('Check') {
+      steps {
+        git clone 'https://codeup.aliyun.com/6267a79991fcf152ea06ff0c/tzfa_nest.git'
+      }
+    }
+
+    stage('Install') {
+      steps {
+        container('nodejs') {
+          sh 'node -v'
+          sh 'cd tzfa_nest'
+          sh 'npm i pnpm -g'
+          sh 'pnpm i'
+        }
+      }
+    }
+
+    stage('build & make') {
+      steps {
+//           sh 'git clone https://codeup.aliyun.com/6267a79991fcf152ea06ff0c/tzfa_nest.git'
+        container('nodejs') {
+           sh 'npm run build'
+           sh 'docker build -t $REGISTRY/$HARBOR_NAMESPACE/$APP_NAME .'
+           sh 'docker push $REGISTRY/$HARBOR_NAMESPACE/$APP_NAME .'
+           sh 'echo image: $REGISTRY/$DOCKERHUB_USERNAME/$APP_NAME'
+        }
+      }
+    }
+  }
+}
